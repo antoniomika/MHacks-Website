@@ -54,27 +54,26 @@ $packery.on('click', '.grid-item, .grid-item-expand', function(event){
 
         openItem.toggleClass('grid-item-expand');
         openItem.toggleClass('grid-item');
-        openItem.toggleClass('stamp');
     }
 
     var isExpanded = item.hasClass('grid-item-expand');
     item.toggleClass('grid-item-expand');
     item.toggleClass('grid-item');
-    item.toggleClass('stamp');
 
     if(isExpanded){
         // was expanded, now shrinking
-        setTimeout(function(){$packery.packery('shiftLayout');}, 250);
+        setTimeout(function(){
+            $packery.packery('layout');
+        }, 250);
     } else {
         // is expanding
-        setTimeout(function(){
-            $packery.packery('fit', event.currentTarget);
-            setTimeout(function(){
-                $('html, body').animate({
-                  scrollTop: item.offset().top - 120
-                }, 1000);
-            }, 250);
-        }, 250);
+        $packery.packery('fit', event.currentTarget);
+        $packery.packery('stamp', item);
+        $packery.packery('layout');
+        $packery.packery('unstamp', item);
+        $('html, body').animate({
+            scrollTop: item.offset().top - 120
+        }, 1000);
     }
 
     openElement = isExpanded ? null : event.currentTarget;
@@ -140,7 +139,12 @@ $(window).scroll(function() {
             $logoM.css("height", "90%");
         }
     } else {
+        $header.css("height", 60);
         $header.addClass("header-condensed");
+        $eventInfo.css("padding-left", 25);
+        $headerButtons.css("padding-right", 25);
+        $menuDropdown.css("padding-right", 25);
+        $menuContent.css("top", 60);
         $logoText.css("opacity", 0);
         $logoText.addClass("visibilityHidden");
         $logoM.css("height", "90%");
@@ -151,6 +155,12 @@ $menuContent.css("display", "none");
 
 $menuTrigger.click(function(){
     $menuContent.slideToggle();
+});
+
+$(".faq-item .question").click(function(event){
+    var q = $(event.target);
+    q.toggleClass("open");
+    $(".faq-item .answer[data-qid='" + q.data("qid") + "']").stop().slideToggle('medium');
 });
 
 function colorName(index){

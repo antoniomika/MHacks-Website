@@ -28,7 +28,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework.authtoken',
     'rest_framework_docs',
-    'MHacks',
+    'MHacks.apps.MhacksConfig',
     'push_notifications',
     'crispy_forms',
 ]
@@ -143,3 +143,5 @@ STATICFILES_DIRS = [
 ]
 
 APPEND_SLASH = True
+
+MEDIA_ROOT = 'resumes/'

@@ -15,6 +15,35 @@ from jinja2 import Environment
 from config.settings import EMAIL_HOST_USER
 from config.settings import MANDRILL_API_KEY
 
+from MHacks.globals import permissions_map
+
+
+# Updates permissions to groups
+def add_permissions(sender, **kwargs):
+    from django.contrib.auth.models import Group, Permission
+    groups_queryset = Group.objects.all()
+    permissions_queryset = Permission.objects.all()
+
+    # Not the cleanest way but yolo. Maybe use sets? Would make permission removal easier too
+    for group_enum, group_permissions in permissions_map.iteritems():
+        print ''
+        group, created = groups_queryset.get_or_create(name=group_enum)
+        if created:
+            print 'Created group {}.'.format(group_enum)
+
+        group.permissions.clear()
+        for permission in group_permissions:
+            permission_object = permissions_queryset.filter(codename=permission)
+            if not permission_object:
+                raise Exception('Invalid permission {}. '
+                                'Have all the relevant migrations been applied?'.format(permission))
+            permission_object = permission_object[0]
+
+            group.permissions.add(permission_object)
+            print 'Added permission {} for group {}.'.format(permission, group_enum)
+
+        group.save()
+
 
 # Sends mail through mandrill client.
 def send_mandrill_mail(template_name, subject, email_to, email_vars=None):
@@ -32,12 +61,13 @@ def send_mandrill_mail(template_name, subject, email_to, email_vars=None):
         }
         for k, v in email_vars.items():
             message['global_merge_vars'].append(
-                    {'name': k, 'content': v}
+                {'name': k, 'content': v}
             )
         return MANDRILL_CLIENT.messages.send_template(template_name, [], message)
     except mandrill.Error as e:
         logger = logging.getLogger(__name__)
         logger.error('A mandrill error occurred: %s - %s' % (e.__class__, e))
+        print('A mandrill error occurred: %s - %s' % (e.__class__, e))
         raise
 
 
@@ -80,7 +110,8 @@ def send_verification_email(user, request):
         kwargs={'uid':uid, 'token': token}
     )
     email_vars = {
-        'confirmation_url': _get_absolute_url(request, relative_confirmation_url)
+        'confirmation_url': _get_absolute_url(request, relative_confirmation_url),
+        'FIRST_NAME': user.first_name
     }
     send_mandrill_mail(
         'confirmation_instructions',
@@ -95,16 +126,15 @@ def send_password_reset_email(user, request):
     uid = urlsafe_base64_encode(force_bytes(user.pk))
     update_password_url = reverse(
         'mhacks-update_password',
-        kwargs={'uid':uid, 'token': token}
+        kwargs={'uid': uid, 'token': token}
     )
-    email_vars = {
-        'update_password_url': _get_absolute_url(request, update_password_url)
-    }
     send_mandrill_mail(
-        'password_reset_instructions',
+        'change_password',
         'Reset Your MHacks Password',
         user.email,
-        email_vars
+        email_vars={
+            'update_password_url': _get_absolute_url(request, update_password_url)
+        }
     )
 
 
@@ -142,8 +172,8 @@ def environment(**options):
     """
     env = Environment(**options)
     env.globals.update({
-       'static': staticfiles_storage.url,
-       'url_for': reverse,
+        'static': staticfiles_storage.url,
+        'url_for': reverse,
     })
     from django.utils.text import slugify
     env.filters['slugify'] = slugify
@@ -158,5 +188,5 @@ def validate_url(data, query):
     :param query: string to search within the url
     :return:
     """
-    if query not in data:
+    if data and query not in data:
         raise forms.ValidationError('Please enter a valid {} url'.format(query))

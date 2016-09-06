@@ -1,34 +1,141 @@
-{% extends 'base.html' %}
+{% extends 'basic_page.html' %}
 
-{% block headers %}
-    <link rel="stylesheet" media="all" href="{{ static('stylesheets/form.css') }}">
+{% block basic_page_headers %}
+    <link rel="stylesheet" media="all" href="{{ static('stylesheets/dashboard.css') }}">
 {% endblock %}
 
-{% block content %}
-    {% include 'header.html' %}
+{% block basic_page_title %}Hacker Dashboard{% endblock %}
+{% block pagetitle %}MHacks Dashboard{% endblock %}
 
-    <div class="container container-form">
-        <div class="col-12 text-center title-form">
-            <h3 class="first head"><span>Dashboard</span></h3>
-        </div>
-        {% if request.user|belongs_to(groups.APP_READER) %}
-            <div style="text-align:center; padding-bottom:0;" class="section container">
-                <h3>Looks like you're someone special ;)</h3>
-                <h3>Head here to read applications:</h3>
-                <a href=""><button type="button">Read Apps</button></a> {# TODO: Fill URL #}
-            </div>
+{% block basic_page_content %}
+    <br>
+
+    <div class="body-info" id="main-message">
+        {% if request.user and request.user.groups.filter(name='application_reader').exists() %}
+            <h2>Looks like you're an application reader!</h2>
+            <a href="{{url_for('mhacks-applicationSearch')}}"><button type="button">Read Apps</button></a>
+            <br>
+            <hr>
         {% endif %}
-        {% if request.user|belongs_to(groups.SPONSOR) %}
-            {# TODO: Show sponsor related information here #}
+
+        {% if request.user and request.user.groups.filter(name='sponsor').exists() %}
+            <h2>Looks like you're a sponsor!</h2>
+            {# TODO: Show sponsor related stuff #}
+            <br>
+            <hr>
         {% endif %}
-        {% if request.user|belongs_to(groups.STATS) %}
+
+        {% if request.user and request.user.groups.filter(name='stats_team').exists() %}
+            <h2>Looks like you're on the stats team!</h2>
             {# TODO: Show stats link and filter links here, i.e. admins who can view stats pages #}
+            <br>
+            <hr>
         {% endif %}
-        {% if request.user|belongs_to(groups.HACKER) %}
-            {% if request.user.application is defined and request.user.application.submitted %}
-                <h3 style="text-align: center;">Thank you for submitting your application!</h3>
+
+        {% if request.user and request.user.groups.filter(name='hacker').exists() %}
+            {% if application %}
+                {% if application.decision == 'Accept' %}
+                    <h2>Application Status: <span class="rounded-box accept">ACCEPTED</span></h2>
+                    <p>You’re awesome. We’re awesome. Head over to our <a href="https://www.facebook.com/events/1197509966946089/">Facebook event page</a> and join the community!</p>
+                    <p>Registration isn’t open yet, but check back here this week for the form, bus routes, and your Pre-Event Checklist 🎉</p>
+{#                    <p>Hit the button below to register and make sure you check out our <span class="fake-link" id="bus-routes-link">bus routes</span>! 🎉</p>#}
+{#                    <a href="{{ url_for('mhacks-registration') }}"><button type="button">Register</button></a>#}
+
+                    <div id="bus-routes">
+                        <br>
+                        <p><b>We're sending buses to the following schools:</b></p>
+                        <ul style="list-style: none; padding-left: 0; border: 1px dashed #337ab7;">
+                            <li>Georgia Tech</li>
+                            <li>Waterloo</li>
+                            <li>Toronto/McMaster</li>
+                            <li>McGill</li>
+                            <li>CMU/Pitt</li>
+                            <li>UMD</li>
+                            <li>Purdue</li>
+                            <li>UIUC</li>
+                            <li>NYC</li>
+                            <li>Rochester/Case Western</li>
+                            <li>Rutgers/UPenn</li>
+                            <li>Florida State</li>
+                        </ul>
+                    </div>
+                    <br>
+
+                    {% if application.reimbursement %}
+                        <br>
+                        <h2>Reimbursement amount: <span class="rounded-box accept">${{ '{:.2f}'.format(application.reimbursement) }}</span> </h2>
+                        <p>You currently have 5 days to send your flight receipt to <a href="mailto:flymhacks@umich.edu">flymhacks@umich.edu</a>! Please refer to <a href="https://goo.gl/wORx7K">this guide</a> for more details on traveling that weekend.</p>
+                        <p>We’ll see you there!</p>
+                    {% endif %}
+                {% elif application.decision == 'Waitlist' %}
+                    <h2>Application Status: <span class="rounded-box waitlist">WAITLIST</span></h2>
+                    <p>Thank you for applying to MHacks 8. Unfortunately, we can't extend you an invitation at the moment, but hang tight! If there’s a change in your decision, we’ll let you know.</p>
+                {% elif application.decision == 'Decline' %}
+                    <div>
+                        <h2>Your application has been submitted. We look forward to reading it!</h2>
+                    </div>
+                    <div class="rounded-box decline">
+                        <p>We haven’t gotten to read your application just yet, but we’re on it! You should receive a decision by next Monday. Hang tight!</p>
+                    </div>
+                {% endif %}
+
+                <br>
+                <hr>
             {% else %}
+                <h2>Welcome to your hacker dashboard! Check back here for MHacks 8 invitations, travel reimbursements, and registration forms.</h2>
             {% endif %}
+
+            {% if mentor_application %}
+                {% if mentor_application.decision == 'Accept' %}
+                    <h2>Mentor Status: <span class="rounded-box accept">ACCEPTED</span></h2>
+                    <p>We're super excited to have you mentor other hackers at MHacks 8! 🎉</p>
+
+                    {% if mentor_application.reimbursement %}
+                        <h2>Reimbursement amount: <span class="rounded-box accept">${{ '{:.2f}'.format(mentorship_application.reimbursement) }}</span> </h2>
+                        <p>You currently have 5 days to send your flight receipt to <a href="mailto:flymhacks@umich.edu">flymhacks@umich.edu</a>! Please refer to <a href="https://goo.gl/wORx7K">this guide</a> for more details on traveling that weekend.</p>
+                        <p>We’ll see you there!</p>
+                    {% endif %}
+                {% elif mentor_application.decision == 'Waitlist' %}
+                    <h2>Mentor Status: <span class="rounded-box waitlist">WAITLIST</span></h2>
+                    <p>Thank you for applying to be a mentor at MHacks 8. Unfortunately, we can't extend you an invitation at the moment, but hang tight! If there’s a change in your decision, we’ll let you know.</p>
+                {% elif mentor_application.decision == 'Decline' %}
+                    <div>
+                        <h2>Your mentor application has been submitted. We look forward to reading it!</h2>
+                    </div>
+                    <div class="rounded-box decline">
+                        <p>We haven’t gotten to read your mentor application just yet, but we’re on it! You should receive a decision soon. Hang tight!</p>
+                    </div>
+                {% endif %}
+
+                <br>
+                <hr>
+            {% endif %}
+
         {% endif %}
     </div>
+
+    <div class="body-info" id="apply-instructions">
+        <h2>Here’s how it works:</h2>
+        <p>When you’re ready, hit the apply button and fill out an application. Our decisions are released on a weekly basis, so if you submit an application by Friday at 11:59pm, you will receive a decision on Monday.</p>
+        <p>If you submit an application after Friday at 11:59pm, your application will be read in the next cycle.</p>
+        <p>If you need to change your answers, don’t worry! Just make sure you submit your changes before Friday 11:59pm of that week.</p>
+        <p>Make sure you submit an application by September 9th in order to be considered for a travel reimbursement!</p>
+        <a href="{{ url_for('mhacks-apply') }}"><b>Let’s do this.</b></a>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+    {{ super() }}
+    <script>
+        $(document).ready(function() {
+            $("#bus-routes").hide();
+            $("#bus-routes-link").on("click", function() {
+                if ($("#bus-routes").is(":visible")) {
+                    $("#bus-routes").hide();
+                } else {
+                    $("#bus-routes").show();
+                }
+            });
+        });
+    </script>
 {% endblock %}

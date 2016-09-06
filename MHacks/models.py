@@ -2,7 +2,7 @@ from __future__ import unicode_literals
 
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, BaseUserManager, User
 from django.contrib.postgres.fields import ArrayField
-from django.core.validators import MaxValueValidator, MinValueValidator
+from django.core.validators import MaxValueValidator, MinValueValidator, RegexValidator
 from django.db import models
 
 from globals import GroupEnum
@@ -70,6 +70,14 @@ class MHacksUser(AbstractBaseUser, PermissionsMixin):
     @property
     def is_staff(self):
         return self.is_superuser
+
+    @property
+    def is_sponsor(self):
+        return self.groups.filter(name='sponsor').exists()
+
+    @property
+    def is_application_reader(self):
+        return self.groups.filter(name='application_reader').exists()
 
     def get_full_name(self):
         """
@@ -168,49 +176,149 @@ class PushToken(models.Model):
 
 
 class Application(Any):
-    from application_lists import GENDERS, RACES, TECH_OPTIONS, COLLEGES, MAJORS, STATES
+    from application_lists import TECH_OPTIONS, APPLICATION_DECISION
 
     # General information
     user = models.OneToOneField(AUTH_USER_MODEL)
-    # school = models.CharField(max_length=255, default='', choices=zip(COLLEGES, COLLEGES))
+    is_high_school = models.BooleanField(default=False)
+    is_international = models.BooleanField(default=False)
     school = models.CharField(max_length=255, default='')
-    is_high_school = models.BooleanField()
-    major = models.CharField(max_length=255, default='', choices=zip(MAJORS, MAJORS))
-    grad_date = models.DateField()
+    major = models.CharField(max_length=255, default='', blank=True)
+    grad_date = models.DateField(null=True, blank=True)
     birthday = models.DateField()
 
     # Demographic
-    gender = models.CharField(max_length=16, choices=GENDERS, default='none')
-    race = models.CharField(max_length=16, choices=RACES, default='none')
+    gender = models.CharField(max_length=32, default='')
+    race = models.CharField(max_length=64, default='')
 
     # External Links
     github = models.URLField()
     devpost = models.URLField()
     personal_website = models.URLField()
-    resume = models.FileField(upload_to='resumes/', max_length=(10 * 1024 * 1024))  # 10 MB max file size
+    resume = models.FileField(max_length=(10 * 1024 * 1024))  # 10 MB max file size
 
     # Experience
-    num_hackathons = models.IntegerField(default=0)
+    num_hackathons = models.IntegerField(default=0, validators=[
+        MinValueValidator(limit_value=0, message='You went to negative hackathons? Weird...')])
+    mentoring = models.BooleanField(default=False)
 
     # Interests
-    cortex = ArrayField(models.CharField(max_length=16, choices=TECH_OPTIONS, default='', blank=True), size=len(TECH_OPTIONS))
+    cortex = ArrayField(models.CharField(max_length=16, choices=TECH_OPTIONS, default='', blank=True),
+                        size=len(TECH_OPTIONS))
     passionate = models.TextField()
     coolest_thing = models.TextField()
     other_info = models.TextField()
 
     # Logistics
     needs_reimbursement = models.BooleanField(default=False)
-    can_pay = models.FloatField(default=0)
+    can_pay = models.FloatField(default=0, validators=[MinValueValidator(limit_value=0.0)])
     from_city = models.CharField(max_length=255, default='')
-    from_state = models.CharField(max_length=5, choices=zip(STATES, STATES), default='')
+    from_state = models.CharField(max_length=64, default='')
 
     # Miscellaneous
-    mentoring = models.BooleanField(default=False)
     submitted = models.BooleanField(default=False)
 
     # Private administrative use
     score = models.FloatField(default=0)
-    reimbursement = models.FloatField(default=0)
+    reimbursement = models.FloatField(default=0, validators=[MinValueValidator(limit_value=0.0)])
+    decision = models.CharField(max_length=16, choices=zip(APPLICATION_DECISION, APPLICATION_DECISION),
+                                default='Decline')
 
     def __unicode__(self):
         return self.user.get_full_name() + '\'s Application'
+
+
+class MentorApplication(Any):
+    from application_lists import SKILLS, APPLICATION_DECISION
+
+    user = models.OneToOneField(AUTH_USER_MODEL)
+
+    # Mentor Info
+    first_time_mentor = models.BooleanField(default=False)
+
+    # Short Response
+    what_importance = models.TextField()
+    why_mentor = models.TextField()
+    mentorship_ideas = models.TextField()
+
+    # Skill Review
+    skills = ArrayField(models.CharField(max_length=32, choices=zip(SKILLS, SKILLS), blank=True), size=len(SKILLS))
+    other_skills = models.CharField(max_length=255, default='', blank=True)
+    github = models.URLField(blank=True)
+
+    # Commitment
+    agree_tc = models.BooleanField(default=False)
+
+    # Internal
+    submitted = models.BooleanField(default=False)
+    score = models.FloatField(default=0)
+    reimbursement = models.FloatField(default=0, validators=[MinValueValidator(limit_value=0.0)])
+    decision = models.CharField(max_length=16, choices=zip(APPLICATION_DECISION, APPLICATION_DECISION),
+                                default='Decline')
+
+
+class Ticket(Any):
+    completed = models.BooleanField(default=False)
+    accepted = models.BooleanField(default=False)
+    creator = models.ForeignKey(AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='created_tickets')
+    mentor = models.ForeignKey(AUTH_USER_MODEL, on_delete=models.SET_NULL, related_name='mentored_tickets', blank=True,
+                               null=True)
+    title = models.CharField(max_length=64, default=None)
+    description = models.CharField(max_length=255, default=None)
+    latitude = models.FloatField(blank=True, null=True)
+    longitude = models.FloatField(blank=True, null=True)
+
+    # TODO have actual options?
+    area = models.CharField(max_length=32, blank=True, default='')
+
+    def __unicode__(self):
+        return self.title + ' by ' + self.creator.get_full_name()
+
+
+class Registration(Any):
+    from application_lists import ACCEPTANCE, TRANSPORTATION, TECH_OPTIONS, T_SHIRT_SIZES, DIETARY_RESTRICTIONS, \
+        DEGREES, EMPLOYMENT, EMPLOYMENT_SKILLS
+
+    # User
+    user = models.OneToOneField(AUTH_USER_MODEL)
+
+    # Acceptance
+    acceptance = models.CharField(max_length=32, choices=ACCEPTANCE)
+
+    # Logistics
+    transportation = models.CharField(max_length=32, choices=TRANSPORTATION)
+
+    # Mentorship
+    want_help = ArrayField(models.CharField(max_length=16, choices=TECH_OPTIONS, blank=True), size=len(TECH_OPTIONS),
+                           blank=True)
+    other_want_help = models.CharField(max_length=64, blank=True)
+    can_help = ArrayField(models.CharField(max_length=16, choices=TECH_OPTIONS, blank=True), size=len(TECH_OPTIONS),
+                          blank=True)
+    other_can_help = models.CharField(max_length=64, blank=True)
+
+    # Day-of Specifics
+    t_shirt_size = models.CharField(max_length=1, choices=zip(T_SHIRT_SIZES, T_SHIRT_SIZES))
+    dietary_restrictions = models.CharField(max_length=32, choices=zip(DIETARY_RESTRICTIONS, DIETARY_RESTRICTIONS),
+                                            blank=True)
+    accommodations = models.TextField(blank=True)
+    medical_concerns = models.TextField(blank=True)
+    anything_else = models.TextField(blank=True)
+    phone_number = models.CharField(max_length=16,
+                                    validators=[RegexValidator(regex=r'^\+?1?\d{9,15}$',
+                                                               message="Phone number must be entered in the format: \
+                                                               '+#########'. Up to 15 digits allowed.")])
+
+    # Sponsor & Employment Information
+    degree = models.CharField(max_length=16, choices=zip(DEGREES, DEGREES))
+    employment = models.CharField(max_length=64, choices=zip(EMPLOYMENT, EMPLOYMENT))
+    technical_skills = ArrayField(
+        models.CharField(max_length=32, choices=zip(EMPLOYMENT_SKILLS, EMPLOYMENT_SKILLS), blank=True),
+        size=len(EMPLOYMENT_SKILLS), blank=True)
+
+    # Waivers and Code of Conduct
+    code_of_conduct = models.BooleanField(default=False)
+    waiver_signature = models.CharField(max_length=128)
+    mlh_code_of_conduct = models.BooleanField(default=False)
+
+    # Internal
+    submitted = models.BooleanField(default=False)

@@ -1,0 +1,42 @@
+#main-message {
+    text-align: center;
+}
+
+.body-info {
+    color: rgb(37, 37, 37);
+}
+
+.body-info h2 {
+    color: black;
+}
+
+.body-info h3 {
+    color: black;
+}
+
+.rounded-box {
+    padding: 3px;
+    border-radius: 5px 5px 5px 5px;
+}
+
+.accept {
+    background-color: lawngreen;
+}
+
+.waitlist {
+    background-color: yellow;
+}
+
+.decline {
+    background-color: dimgray;
+    color: white;
+}
+
+.fake-link {
+    color: #337ab7;
+    cursor: pointer;
+}
+
+.fake-link:hover {
+    text-decoration: underline;
+}

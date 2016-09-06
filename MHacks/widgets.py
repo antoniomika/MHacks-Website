@@ -1,4 +1,5 @@
 from django import forms
+from django.contrib.admin.widgets import AdminFileWidget
 
 
 class ArrayFieldSelectMultiple(forms.SelectMultiple):
@@ -6,7 +7,6 @@ class ArrayFieldSelectMultiple(forms.SelectMultiple):
     a multi-select interface that can be given a set of `choices`.
 
     You can provide a `delimiter` keyword argument to specify the delimeter used.
-
     """
 
     def __init__(self, *args, **kwargs):
@@ -28,3 +28,14 @@ class ArrayFieldSelectMultiple(forms.SelectMultiple):
             # get a delimited string, so we're doing a little extra work.
             return self.delimiter.join(data.getlist(name))
         return data.get(name, None)
+
+
+class MHacksAdminFileWidget(AdminFileWidget):
+    """
+    Overriding the AdminFileWidget / ClearableFileInput to remove the link (<a> tag)
+    """
+    template_with_initial = ('<p class="file-upload">%s</p>'
+                             % (
+                                 '%(initial_text)s: <b>%(initial)s</b> '
+                                 '%(clear_template)s<br />%(input_text)s: %(input)s'
+                             ))
