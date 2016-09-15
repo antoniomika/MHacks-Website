@@ -136,10 +136,6 @@ class ScanEvent(Any):
     """
     name = models.CharField(max_length=60)
     info = models.TextField(default='')
-    # can only have one scan per user
-    can_scan_only_once_per_user = models.BooleanField(default=True)
-    # should this be a hard limit on the number of scans this event can handle
-    # or the number of scans per user?
     num_allowable_scans = models.IntegerField()
 
     # a ScanEvent can have many users that scan a QR code for that ScanEvent, 

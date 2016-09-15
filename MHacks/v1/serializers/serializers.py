@@ -46,7 +46,6 @@ class EventSerializer(MHacksModelSerializer):
 
 class ScanEventSerializer(MHacksModelSerializer):
     id = CharField(read_only=True)
-    can_only_scan_once_per_user = BooleanField()
     num_allowable_scans = IntegerField()
 
     users = PrimaryKeyRelatedField(many=True, pk_field=CharField(), 
