@@ -3,9 +3,12 @@ from rest_framework.authtoken.serializers import AuthTokenSerializer
 from rest_framework.fields import CharField, ChoiceField
 from rest_framework.relations import PrimaryKeyRelatedField
 from rest_framework.serializers import ModelSerializer
+from rest_framework.serializers import BooleanField
+from rest_framework.serializers import IntegerField
 
 from MHacks.models import Announcement as AnnouncementModel
 from MHacks.models import Event as EventModel
+from MHacks.models import ScanEvent as ScanEventModel
 from MHacks.models import Location as LocationModel
 from MHacks.models import MHacksUser as MHacksUserModel
 from MHacks.models import Ticket as TicketModel
@@ -39,6 +42,22 @@ class EventSerializer(MHacksModelSerializer):
     class Meta:
         model = EventModel
         fields = ('id', 'name', 'info', 'start', 'duration', 'locations', 'category', 'approved')
+
+
+class ScanEventSerializer(MHacksModelSerializer):
+    id = CharField(read_only=True)
+    can_only_scan_once_per_user = BooleanField()
+    num_allowable_scans = IntegerField()
+
+    users = PrimaryKeyRelatedField(many=True, pk_field=CharField(), 
+                queryset=MHacksUserModel.objects.all().filter(deleted=False))
+
+    backing_event = PrimaryKeyRelatedField(many=False, pk_field=CharField(),
+                queryset=EventModel.objects.all().filter(deleted=False))
+
+    class Meta:
+        model = ScanEventModel
+        fields = ('id', 'name', 'info', 'can_only_scan_once_per_user', 'num_allowable_scans', 'users', 'backing_event')
 
 
 class LocationSerializer(MHacksModelSerializer):
